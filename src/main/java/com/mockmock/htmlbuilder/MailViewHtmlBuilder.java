@@ -1,6 +1,11 @@
 package com.mockmock.htmlbuilder;
 
 import com.mockmock.mail.MockMail;
+import com.mockmock.mail.MockMail.Attachment;
+
+import java.text.SimpleDateFormat;
+import java.util.List;
+
 import org.apache.commons.lang.StringEscapeUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -10,6 +15,8 @@ public class MailViewHtmlBuilder implements HtmlBuilder
 {
     private MailViewHeadersHtmlBuilder headersBuilder;
     private AddressesHtmlBuilder addressesHtmlBuilder;
+    
+    private SimpleDateFormat timeStampFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
     private MockMail mockMail;
 
@@ -33,8 +40,10 @@ public class MailViewHtmlBuilder implements HtmlBuilder
         {
             subjectOutput = StringEscapeUtils.escapeHtml(mockMail.getSubject());
         }
-
-		subjectOutput += " <small class=\"deleteLink\"><a href=\"/delete/" + mockMail.getId() + "\">Delete</a></small>";
+        
+        subjectOutput += " </br>" +
+        				 " <small class=\"download_Link\"><a href=\"/eml/" + mockMail.getId() + "\">Download</a></small>" +
+        				 " <small class=\"delete_Link\"><a href=\"/delete/" + mockMail.getId() + "\">Delete</a></small>";
 
         String output = "<div class=\"container\">\n";
 
@@ -42,6 +51,12 @@ public class MailViewHtmlBuilder implements HtmlBuilder
                 "<h2>" + subjectOutput + "</h2>\n" +
                 "  <div class=\"row\">\n";
 
+        output +=
+                "    <div class=\"span10\" name=\"time\">\n" +
+                "       <h3>Server Time Stamp</h3>\n" +
+                "       " + timeStampFormat.format(mockMail.getReceivedTime()) +
+                "    </div>\n";
+        
         output +=
                 "    <div class=\"span10\" name=\"addresses\">\n" +
                 "       <h3>Addresses</h3>\n" +
@@ -63,13 +78,30 @@ public class MailViewHtmlBuilder implements HtmlBuilder
                     "    </div>\n";
         }
 
-        if(mockMail.getAttacheFileName() != null)
+        /*if(mockMail.getAttacheFileName() != null)
         {
             output +=
                     "    <div class=\"span10\" name=\"bodyPlainText\">\n" +
-                            "       <h3>Attachment</h3>\n" +
-                            "       <div class=\"well\"><a href=\"/attachment/" +mockMail.getId() + "\">" + StringEscapeUtils.escapeHtml(mockMail.getAttacheFileName()) + "</a></div>\n" +
-                            "    </div>\n";
+                    "       <h3>Attachment</h3>\n" +
+                    "       <div class=\"well\"><a href=\"/attachment/" +mockMail.getId() + "\">" + StringEscapeUtils.escapeHtml(mockMail.getAttacheFileName()) + "</a></div>\n" +
+                    "    </div>\n";
+        }*/
+        
+        if(mockMail.hasAttachment())
+        {
+            output +=
+                    "    <div class=\"span10\" name=\"bodyPlainText\">\n" +
+                    "       <h3>Attachment(s)</h3>\n" +
+                    "       <div class=\"well\"><ul>";
+            List<Attachment> attachments = mockMail.getAttachments();
+            for(int i = 0; i < attachments.size(); i++){
+            	Attachment attachment = attachments.get(i);
+            	output +=
+                    "<li><a href=\"/attachment/" +mockMail.getId() + "/" + (i+1) + "\">" + StringEscapeUtils.escapeHtml(attachment.getFileName()) + "</a></li>";
+            }
+            output +=
+            		"      </ul></div>" +
+            		"    </div>\n";
         }
 
         if(mockMail.getBodyHtml() != null)
@@ -98,13 +130,13 @@ public class MailViewHtmlBuilder implements HtmlBuilder
                     "</script>";
 
             output +=
-                    "    <div class=\"span10\" name=\"iFrame\">\n" +
-                    "        <h3>HTML body formatted</h3>\n" +
-                    "        <div>\n" +
-                    "        <iframe class=\"well\" width=\"100%\" id=\"htmliframe\"  onload=\"Javascript:SetCwinHeight()\" height=\"1\" frameborder=\"0\" src=\"/view/html/" + mockMail.getId() + "\"name=\"bodyHTML_iFrame\">\n" +
-                    "        </iframe>\n" +
-                    "        <div>\n" +
-                    "    </div>";
+                    "<div class=\"span10\" name=\"iFrame\">\n" +
+                    "	<h3>HTML body formatted</h3>\n" +
+                    "	<div>\n" +
+                    "		<iframe class=\"well\" width=\"95%\" id=\"htmliframe\"  onload=\"Javascript:SetCwinHeight()\" height=\"1\" frameborder=\"0\" src=\"/view/html/" + mockMail.getId() + "\"name=\"bodyHTML_iFrame\">\n" +
+                    "		</iframe>\n" +
+                    "	</div>\n" +
+                    "</div>";
         }
 
 		// just output the raw mail so we're sure everything is on the screen
@@ -112,10 +144,10 @@ public class MailViewHtmlBuilder implements HtmlBuilder
 		{
 			// output complete raw mail
 			output +=
-					"    <div class=\"span10\" name=\"rawOutput\">\n" +
-							"       <h3>Complete raw mail output</h3>\n" +
-							"       <div class=\"well\">" + StringEscapeUtils.escapeHtml(mockMail.getRawMail()) + "</div>\n" +
-							"    </div>\n";
+					"<div class=\"span10\" name=\"rawOutput\">\n" +
+				    "	<h3>Complete raw mail output</h3>\n" +
+				    "	<div class=\"well\">" + StringEscapeUtils.escapeHtml(mockMail.getRawMail()) + "</div>\n" +
+					"</div>\n";
 		}
 
         output +=

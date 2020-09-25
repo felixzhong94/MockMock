@@ -1,20 +1,27 @@
 package com.mockmock.mail;
 
+import java.io.Serializable;
+import java.util.List;
+import java.util.LinkedList;
+
+import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 
-public class MockMail implements Comparable<MockMail>
+public class MockMail implements Comparable<MockMail>, Serializable
 {
-    private long id;
+	private static final long serialVersionUID = 1L;
+		
+	private long id;
     private String from;
     private String to;
     private String subject;
     private String body;
     private String bodyHtml;
     private String rawMail;
-    private MimeMessage mimeMessage;
+    
     private long receivedTime;
-    private byte[] attachment;
-    private String attacheFileName;
+    
+    private List<Attachment> attachments = new LinkedList<>();
 
     public long getId()
     {
@@ -86,16 +93,6 @@ public class MockMail implements Comparable<MockMail>
         this.bodyHtml = bodyHtml;
     }
 
-    public MimeMessage getMimeMessage()
-    {
-        return mimeMessage;
-    }
-
-    public void setMimeMessage(MimeMessage mimeMessage)
-    {
-        this.mimeMessage = mimeMessage;
-    }
-
     @Override
     public int compareTo(MockMail o)
     {
@@ -115,20 +112,80 @@ public class MockMail implements Comparable<MockMail>
     {
         this.receivedTime = receivedTime;
     }
-
-    public byte[] getAttachment() {
-        return attachment;
+    
+    public void setAttachments(List<Attachment> attachments) {
+        this.attachments = attachments;
+    }
+    
+    public List<Attachment> getAttachments() {
+        return attachments;
+    }
+    
+    public boolean addAttachment(String fileName, String contentType, byte[] data){
+    	return attachments.add(new Attachment(fileName, contentType, data));
+    }
+    
+    public boolean hasAttachment(){
+    	return attachments != null && !attachments.isEmpty();
+    }
+    
+    public static class Attachment implements Serializable{
+		private static final long serialVersionUID = 1L;
+		
+		private String fileName;
+    	private String contentType;
+    	private byte[] data;
+    	
+    	public Attachment(String fileName, String contentType, byte[] data){
+    		this.fileName = fileName;
+    		this.contentType = contentType;
+    		this.data = data;
+    	}
+    	
+    	public void setFileName(String fileName){
+    		this.fileName = fileName;
+    	}
+    	
+    	public String getFileName(){
+    		return fileName;
+    	}
+    	
+    	public void setContentType(String contentType){
+    		this.contentType = contentType;
+    	}
+    	
+    	public String getContentType(){
+    		return contentType;
+    	}
+    	
+    	public void setData(byte[] data){
+    		this.data = data;
+    	}
+    	
+    	public byte[] getData(){
+    		return data;
+    	}
+    }
+    
+    private MimeMessageSerializableWrapper mimeMessageWrapper;
+    
+    public MimeMessage getMimeMessage()
+    {
+        return (mimeMessageWrapper != null) ? mimeMessageWrapper.getMimeMessage() : null;
+    }
+    
+    public MimeMessageSerializableWrapper getMimeMessageWrapper()
+    {
+        return mimeMessageWrapper;
     }
 
-    public void setAttachment(byte[] attachment) {
-        this.attachment = attachment;
+    public void setMimeMessageWrapper(MimeMessageSerializableWrapper mimeMessageWrapper)
+    {
+        this.mimeMessageWrapper = mimeMessageWrapper;
     }
-
-    public String getAttacheFileName() {
-        return attacheFileName;
-    }
-
-    public void setAttacheFileName(String attacheFileName) {
-        this.attacheFileName = attacheFileName;
-    }
+    
+    public void setMimeMessage(MimeMessage mimeMessage) throws MessagingException
+    {
+		this.mimeMessageWrapper = new MimeMessageSerializableWrapper(mimeMessage);
+    }    
 }

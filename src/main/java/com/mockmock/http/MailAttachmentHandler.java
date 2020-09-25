@@ -2,21 +2,17 @@ package com.mockmock.http;
 
 import com.mockmock.mail.MailQueue;
 import com.mockmock.mail.MockMail;
-import org.apache.commons.io.IOUtils;
+import com.mockmock.mail.MockMail.Attachment;
+
 import org.eclipse.jetty.server.Request;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.util.MimeTypeUtils;
-
 import javax.mail.internet.MimeUtility;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URLConnection;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,13 +23,12 @@ import java.util.regex.Pattern;
 @Service
 public class MailAttachmentHandler extends BaseHandler{
 
-    private String pattern = "^/attachment/([0-9]+)/?$";
+    private String pattern = "^/attachment/([0-9]+)/([0-9]+)/?$";
 
     private MailQueue mailQueue;
 
     @Override
     public void handle(String target, Request request, HttpServletRequest httpServletRequest, HttpServletResponse response) throws IOException, ServletException {
-
         if(!isMatch(target))
         {
             return;
@@ -44,38 +39,48 @@ public class MailAttachmentHandler extends BaseHandler{
         {
             return;
         }
+        
+        long attachmentId = getAttachmentId(target);
+        if(attachmentId == 0)
+        {
+            return;
+        }
 
         MockMail mockMail = this.mailQueue.getById(mailId);
 
-        if(mockMail == null)
+        if(mockMail == null || !mockMail.hasAttachment())
         {
             return;
         }
+        
+        //mail can have empty html bodies
+        //if(mockMail.getBodyHtml() == null)
+        //{
+        //    return;
+        //}
 
-        if(mockMail.getBodyHtml() == null)
+
+        List<Attachment> attachments = mockMail.getAttachments();
+        int index = (int)(attachmentId - 1);
+        
+        if(attachmentId > Integer.MAX_VALUE || index < 0 || index > attachments.size())
         {
-            return;
+        	return;
         }
-
-        String fileName = mockMail.getAttacheFileName();
-        String fileNameExt =fileName.substring(fileName.lastIndexOf(".")+1, fileName.length());
-        String mimeType = "application/octet-stream";
-
-        if (fileNameExt.equals("pdf")){
-            mimeType = "application/pdf";
-        }else if(fileNameExt.equals("doc")){
-            mimeType = "application/msword";
-        }else if(fileNameExt.equals("xls")){
-            mimeType = "application/vnd.ms-excel";
+        
+        Attachment attachment = attachments.get(index);
+        
+        if(attachment == null || attachment.getContentType() == null || attachment.getFileName() == null || attachment.getData() == null)
+        {
+        	return;
         }
-
-        response.setContentType(mimeType);
-        response.setHeader("Content-Disposition", " attachment;filename="+ MimeUtility.encodeWord(mockMail.getAttacheFileName()));
-        response.getOutputStream().write(mockMail.getAttachment());
+        
+        response.setContentType(attachment.getContentType());
+        response.setHeader("Content-Disposition", " attachment;filename="+ MimeUtility.encodeWord(attachment.getFileName()));
+        response.getOutputStream().write(attachment.getData());
         response.setStatus(HttpServletResponse.SC_OK);
-
+        
         request.setHandled(true);
-
     }
 
     /**
@@ -101,6 +106,27 @@ public class MailAttachmentHandler extends BaseHandler{
         if(matcher.find())
         {
             String result = matcher.group(1);
+            try
+            {
+                return Long.valueOf(result);
+            }
+            catch (NumberFormatException e)
+            {
+                return 0;
+            }
+        }
+
+        return 0;
+    }
+    
+    private long getAttachmentId(String target)
+    {
+        Pattern compiledPattern = Pattern.compile(pattern);
+
+        Matcher matcher = compiledPattern.matcher(target);
+        if(matcher.find())
+        {
+            String result = matcher.group(2);
             try
             {
                 return Long.valueOf(result);

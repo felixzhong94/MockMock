@@ -11,7 +11,8 @@ public class AppStarter
 
     public static void main(String[] args)
     {
-        BeanFactory factory = new ClassPathXmlApplicationContext("META-INF/beans.xml");
+        @SuppressWarnings("resource")
+		BeanFactory factory = new ClassPathXmlApplicationContext("META-INF/beans.xml");
 
         Settings settings = (Settings) factory.getBean("settings");
 

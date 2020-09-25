@@ -5,6 +5,7 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.springframework.stereotype.Service;
 
 import javax.mail.internet.MimeMessage;
+
 import java.util.ArrayList;
 
 @Service
@@ -35,7 +36,8 @@ public class MailListHtmlBuilder implements HtmlBuilder
             output += "      <th>From</th>\n";
             output += "      <th>To</th>\n";
             output += "      <th>Subject</th>\n";
-            output += "      <th>Action</th>\n";
+            output += "      <th>Download</th>\n";
+            output += "      <th>Delete</th>\n";
             output += "    </thead>\n";
             output += "    <tbody>\n";
             for (MockMail mail : mailQueue)
@@ -50,9 +52,9 @@ public class MailListHtmlBuilder implements HtmlBuilder
 
         return output;
     }
-
+    
     private String buildMailRow(MockMail mail)
-    {
+    {	
         StringFromHtmlBuilder fromBuilder = new StringFromHtmlBuilder();
         fromBuilder.setMockMail(mail);
         String fromOutput = fromBuilder.build();
@@ -78,7 +80,12 @@ public class MailListHtmlBuilder implements HtmlBuilder
             "  <td>" + fromOutput + "</td>\n" +
             "  <td>" + toOutput + "</td>\n" +
             "  <td><a title=\"" + StringEscapeUtils.escapeHtml(mail.getSubject()) + "\" href=\"/view/" + mail.getId() + "\">" + subjectOutput + "</a></td>\n" +
-            "  <td><a title=\"Delete this mail\" href=\"/delete/" + mail.getId() + "\"><em>Delete</em></a></td>\n" +
+            "  <td>" +
+            "    <a title=\"Download this mail\" href=\"/eml/" + mail.getId() + "\"><em>Download</em></a>" +
+            "  </td>" +
+            "  <td>" +
+            "    <a title=\"Delete this mail\" href=\"/delete/" + mail.getId() + "\"><em>Delete</em></a>" +
+            "  </td>\n" +
             "</tr>";
     }
 }

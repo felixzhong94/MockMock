@@ -22,7 +22,7 @@ public class MailViewHeadersHtmlBuilder implements HtmlBuilder
             try
             {
                 output += "<pre>\n";
-                Enumeration headers = mimeMessage.getAllHeaderLines();
+                Enumeration<?> headers = mimeMessage.getAllHeaderLines();
                 while (headers.hasMoreElements())
                 {
                     String header = (String) headers.nextElement();

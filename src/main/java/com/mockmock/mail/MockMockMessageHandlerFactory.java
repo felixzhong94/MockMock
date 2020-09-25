@@ -15,7 +15,9 @@ import javax.mail.BodyPart;
 import javax.mail.MessagingException;
 import javax.mail.Multipart;
 import javax.mail.Session;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
+import javax.mail.internet.MimeMultipart;
 import javax.mail.internet.MimeUtility;
 import java.io.*;
 import java.util.Properties;
@@ -123,13 +125,17 @@ public class MockMockMessageHandlerFactory implements MessageHandlerFactory
                 Object messageContent = message.getContent();
                 if(messageContent instanceof Multipart)
                 {
+                	System.out.println("Get Multipart mail");//TODO
+                	
                     Multipart multipart = (Multipart) messageContent;
                     for (int i = 0; i < multipart.getCount(); i++)
                     {
                         BodyPart bodyPart = multipart.getBodyPart(i);
                         String contentType = bodyPart.getContentType();
                         contentType = contentType.replaceAll("\t|\r|\n", "");
-                        System.out.println(contentType);
+                        System.out.println("contentType: " + contentType);
+                        //System.out.println("----- START -----");
+                        //System.out.println("----- END -----");
 
                         if(contentType.matches("text/plain.*"))
                         {
@@ -139,7 +145,8 @@ public class MockMockMessageHandlerFactory implements MessageHandlerFactory
                         {
                             mockMail.setBodyHtml(convertStreamToString(bodyPart.getInputStream()));
                         }
-                        else if(contentType.matches("multipart/related.*")){
+                        else if(contentType.matches("multipart/related.*"))
+                        {
                             // compound documents
                             Multipart contentMulti = (Multipart)bodyPart.getContent();
                             for (int j = 0; j < contentMulti.getCount(); j++){
@@ -149,27 +156,64 @@ public class MockMockMessageHandlerFactory implements MessageHandlerFactory
                                 String encoding = "UTF-8";
 
                                 if(subContentType.matches("text/html.*")){
-                                    String bodyHtml = IOUtils.toString(MimeUtility.decode(subPart.getInputStream(), "quoted-printable"), "utf-8");
+                                    String bodyHtml = IOUtils.toString(MimeUtility.decode(subPart.getInputStream(), "quoted-printable"), encoding);
                                     mockMail.setBodyHtml(bodyHtml);
                                 }
                             }
 
-                        } else if (contentType.matches("application/octet-stream.*") || contentType.matches("application/pdf.*")) {
+                        } 
+                        else if(contentType.matches("multipart/alternative.*"))
+                        {	
+                        	Object content = bodyPart.getContent();
+                        	if(content instanceof MimeMultipart)
+                        	{
+                        		MimeMultipart contentMulti = (MimeMultipart) content;
+                        		for (int j = 0; j < contentMulti.getCount(); j++){
+                                    BodyPart subPart = contentMulti.getBodyPart(j);
+                                    String subContentType = subPart.getContentType();
+                                    System.out.println(subContentType);
+                                    if(subContentType.matches("text/html.*")){
+                                    	mockMail.setBodyHtml(convertStreamToString(subPart.getInputStream()));
+                                    }
+                                    else if(subContentType.matches("text/plain.*")){
+                                    	mockMail.setBody(convertStreamToString(subPart.getInputStream()));
+                                    }
+                                }
+                        	}
+                        	else if (content instanceof MimeBodyPart)
+                        	{
+                        		MimeBodyPart contentBody = (MimeBodyPart) content;
+                        		String subContentType = contentBody.getContentType();
+                                System.out.println(subContentType);
+                                if(subContentType.matches("text/html.*")){
+                                	mockMail.setBodyHtml(convertStreamToString(contentBody.getInputStream()));
+                                }
+                                else if(subContentType.matches("text/plain.*")){
+                                	mockMail.setBody(convertStreamToString(contentBody.getInputStream()));
+                                }
+                        	}
+                        }
+                        else if (contentType.matches("application/.*")) 
+                        {
                             // attachment
                             String strFileName = MimeUtility.decodeText(bodyPart.getFileName());
-                            mockMail.setAttacheFileName(strFileName);
+                            String strContentType = MimeUtility.decodeText(bodyPart.getContentType());
                             byte[] attachContent = IOUtils.toByteArray(bodyPart.getInputStream());
-                            mockMail.setAttachment(attachContent);
+                            mockMail.addAttachment(strFileName, strContentType, attachContent);
                         }
                     }
                 }
                 else if(messageContent instanceof InputStream)
                 {
+                	System.out.println("Get stream mail");//TODO
+                	
                     InputStream mailContent = (InputStream) messageContent;
                     mockMail.setBody(convertStreamToString(mailContent));
                 }
                 else if(messageContent instanceof String)
                 {
+                	System.out.println("Get string mail");//TODO
+                	
                     String contentType = message.getContentType();
 
                     if(contentType.matches("text/plain.*"))
@@ -250,5 +294,5 @@ public class MockMockMessageHandlerFactory implements MessageHandlerFactory
 
             return stringBuilder.toString();
         }
-    }
+    }    
 }
